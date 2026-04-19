@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+
+from scapy.all import IP, ICMP, sr1, conf, TCP, Raw
+import argparse
+import requests
+from loguru import logger
+
+conf.verb = 0
+
+logo = '''
+                            
+⠀⠀⢀⣠⣶⣾⣿⣿⣿⣶⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀ °°⠛⠛⠳⢶⣄⡀⠀⠀
+⠀⣠⣿⡿⠛⠉⠁⠀⠉⠙⠻⣿⣷⡀⠀⠀⣠⣴⡶⠀⠀⠀⠀⠀⠀⠀⠙⢿⣄⠀
+⢰⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣿⡄⣸⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀ ⠈⣿⡆
+⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣽⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ⢸⣷
+⣿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⢯⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ⣾⡟
+⠸⣿⣧⡀⠀⠀⠀⠀⠀⠀⠀⢠⣾⣿⠃⠙⣿⣷⡄⠀⠀⠀⠀⠀⠀⠀⠀  ⣼⣿⠃ 
+⠀⠙⢿⣿⣦⣀⣀⢀⣀⣠⣶⣿⠟⠁⠀⠀⠈⠻⣿⣶⣄⣀⡀⢀⣀⣤⣾⡿⠃⠀ 
+⠀⠀⠀⠙⠻⠿⠿⠿⠿⠿⠛⠁⠀⠀⠀⠀⠀⠀⠈⠛⠿⢿⣿⣿⠿⠟⠉⠀⠀⠀  
+                                           by flavio400
+'''
+
+
+help1 = '''erpitone version 1.0.0
+Network scanner for ip and url. Still work in progress...
+libraries:
+    > time
+    > sys
+    > scapy.all
+    > argparse
+how to use: python erpitone.py -ip <ip_addres> -parameter1 -parameter2
+example: python erpitone.py -ip 154.22.3.14 -icmp (put -icmp for an icmp echo response)
+example: python erpitone.py -ip 154.22.3.14 -ports (put -ports to scan the 30 most common ports)'''
+
+
+advice = '''erpitone version 1.0.0 // still work in progress... contact for help or advices.
+any unethical use of this software is, in most countries, illegal.'''
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+     '-ip', '--ip', '-address',
+     dest='ip_address',
+     required=True,
+     help='ip address (8.8.8.8)'
+)
+
+parser.add_argument(
+     '-icmp', '--icmp',
+     dest='icmp_scan',
+     action='store_true',
+     required=False,
+     help='put -icmp or --icmp if you want an ICMP echo response from the ip' 
+)
+
+parser.add_argument(
+     '-ports', '-ps',
+     dest='port_scan',
+     required=False,
+     action='store_true',
+     help='put-ports if you want to scan the 30 most common ports'
+)
+
+parser.add_argument(
+    '--full-ports', '-fps',
+    dest='full_port_scan',
+    required=False,
+    action='store_true',
+    help='put --full-ports if you want a scan on all the 65535 ports'
+)
+
+parser.add_argument(
+    '--server-detection', '-sd',
+    dest='server_detection',
+    required=False,
+    help='put this in your command followed by the website name if you want a server version detection'
+)
+args = parser.parse_args()
+
+logger.add('scan.log')
+
+class erpitone():
+        
+
+    def scan_ICMP_echo_response(icmp_scan):
+        print('\n\n>>>>>> ICMP echo response:\n')
+        if args.ip_address and args.icmp_scan:
+            reply = sr1(
+                IP(dst=args.ip_address) / ICMP(),
+                timeout = 3,
+                verbose = 0,
+                retry = 0,
+                inter = 0.1
+            )
+            if reply:
+                reply.show()
+                logger.info(f"ICMP echo response:\n{reply}\n")
+            else:
+                print('host might not be reachable')
+                logger.info(f"ICMP echo response:\n host might not be reachable")
+        else:
+            print('you have to insert the ip address (python erpitone.py 8.8.8.8)')
+
+
+    def port_scan(port_scan):
+        ports = [
+        80,      # HTTP
+        443,     # HTTPS
+        7547,    # CPE WAN Management Protocol (CWMP)
+        22,      # SSH
+        8080,    # HTTP alternate
+        5060,    # SIP
+        53,      # DNS
+        21,      # FTP
+        123,     # NTP
+        4567,    # Sinatra default / vari
+        8089,    # Splunk / Networker
+        25,      # SMTP
+        8008,    # HTTP alternate / EMC2 Networker
+        3389,    # RDP (Remote Desktop Protocol)
+        2000,    # RemoteAnywhere
+        554,     # RTSP
+        3306,    # MySQL
+        1723,    # PPTP
+        993,     # IMAPS
+        110,     # POP3
+        500,     # ISAKMP / IPsec
+        587,     # SMTP Submission
+        8081,    # HTTP alternate
+        995,     # POP3S
+        465,     # SMTP over SSL (legacy)
+        23,      # Telnet
+        179,     # BGP
+        143,     # IMAP
+        2087,    # WebHost Manager SSL
+        8000     # HTTP alternative
+    ]
+
+        for port in ports:
+            pkt = IP(dst=args.ip_address)/TCP(dport=port, flags="S")
+            resp = sr1(pkt, timeout=0.5, verbose=0)
+            if resp and resp.haslayer(TCP) and resp[TCP].flags & 0x12 == 0x12:
+                print(f"port {port} open")
+                logger.info(f"open port found:\n{port}")
+            else:
+                print('port not open')
+                logger.info(f"no open ports found\n")
+
+
+    def full_port_scan(full_port_scan):
+        for port1 in range(1, 65535):
+            pkt = IP(dst=args.ip_address)/TCP(dport=port1, flags="S")
+            resp = sr1(pkt, timeout=0.25, verbose=0)
+            if resp and resp.haslayer(TCP) and resp[TCP].flags & 0x12 == 0x12:
+                print(f"port {port1} open")
+                logger.info(f"open port found: \n{port1}")
+            else:
+                print('port not open')
+                logger.info(f"no open ports found\n")
+
+
+    def server_detection(server_detection):
+        ip = args.ip_address
+        host = args.server_detection
+        headers = {
+            "Host": host,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "*/*",
+            "Connection": "close",
+        }
+        try:
+            r = requests.head(f"http://{ip}", headers=headers, timeout=4, allow_redirects=False)
+            print("HTTP response:", r.status_code)
+            print(r.headers)
+            logger.info(f"http banner:\n{r.headers}")
+        except Exception as e:
+            print("HTTP failed:", e)
+
+        try:
+            r = requests.head(f"https://{ip}", headers=headers, timeout=4, allow_redirects=False, verify=False)
+            print("\nHTTPS response:", r.status_code)
+            print(r.headers)
+            logger.info(f"http banner:\n{r.headers}")
+        except Exception as e:
+            print("HTTPS failed:", e)
+
+
+print(logo)
+print(advice)
+scanner = erpitone()
+if args.ip_address:
+    logger.info(f"erpitone network scanner version 1.0.0\n")
+    logger.info(f"scan performed on {args.ip_address}\n\n")  
+    if args.icmp_scan:
+        scanner.scan_ICMP_echo_response()
+    if args.port_scan:
+        scanner.port_scan()
+    if args.full_port_scan:
+        scanner.full_port_scan()
+    if args.server_detection:
+        scanner.server_detection()
+else:
+    print('put a valid ip address')
